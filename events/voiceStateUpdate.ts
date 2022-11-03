@@ -18,7 +18,7 @@ const voiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
 
     // when user in...
     if (!oldState.channel && newState.channel) {
-        const isMarked = manager.isMarkedChannel(newState.guild, newState.channelId || '');
+        const isMarked = await manager.isMarkedChannel(newState.guild.id, newState.channelId || '');
         if (!isMarked) return;
 
         const members = newState.channel.members;
@@ -39,7 +39,7 @@ const voiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
             manager.stop(oldState.guild);
         }
 
-        const isMarked = manager.isMarkedChannel(newState.guild, newState.channelId || '');
+        const isMarked = await manager.isMarkedChannel(newState.guild.id, newState.channelId || '');
         if (!isMarked) return;
 
         const members2 = newState.channel.members;

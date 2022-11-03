@@ -1,16 +1,12 @@
 import { Player, PlayerSearchResult, QueryType } from "discord-player";
-import { Channel, ClientUser, Guild, TextChannel, VoiceBasedChannel } from "discord.js";
+import { ClientUser, Guild, TextChannel, VoiceBasedChannel } from "discord.js";
 import { shuffle } from "./shuffle";
-import fs from 'fs';
-import path from 'path';
 import { client } from "..";
+import { deleteMarkChannel, getLyrcisChannel, getMarkChannel, upsertLyricsChannel } from "../db";
 
 class YounhaPlayerManager {
     younhaPlayList: PlayerSearchResult;
     player: Player;
-    markedChannel: { [key: string]: string };
-    lyricsChannel: { [key: string]: string };
-    lyricsMessage: { [key: string]: string };
 
     constructor(player: Player) {
         this.player = player;
@@ -18,9 +14,6 @@ class YounhaPlayerManager {
             playlist: null,
             tracks: [],
         }
-        this.markedChannel = {};
-        this.lyricsChannel = {};
-        this.lyricsMessage = {};
     }
 
     init = async (user: ClientUser) => {
@@ -39,13 +32,6 @@ class YounhaPlayerManager {
             };
         }
         this.younhaPlayList = searchResult;
-
-        const markedChannelData = fs.readFileSync(path.join(__dirname, '..', 'db', 'mark_channel.json'), { encoding: 'utf-8', flag: 'r' });
-        this.markedChannel = JSON.parse(markedChannelData || '{}');
-        const lyricsChannelData = fs.readFileSync(path.join(__dirname, '..', 'db', 'lyrics_channel.json'), { encoding: 'utf-8', flag: 'r' });
-        this.lyricsChannel = JSON.parse(lyricsChannelData || '{}');
-        const lyricsMessageData = fs.readFileSync(path.join(__dirname, '..', 'db', 'lyrics_message.json'), { encoding: 'utf-8', flag: 'r' });
-        this.lyricsMessage = JSON.parse(lyricsMessageData || '{}');
     }
     isPaused = (guild: Guild) => {
         const queue = this.player.getQueue(guild);
@@ -88,57 +74,30 @@ class YounhaPlayerManager {
         queue.destroy();
     }
 
-    setMarkedChannel = (guild: Guild, markedChannelId: string) => {
-        if (!guild.id) {
-            return false;
-        }
-        this.markedChannel[guild.id] = markedChannelId;
-        fs.writeFileSync(path.join(__dirname, '..', 'db', 'mark_channel.json'), JSON.stringify(this.markedChannel));
-
-        return true;
-    }
-    removeMarkedChannel = (guild: Guild) => {
-        delete this.markedChannel[guild.id];
-        fs.writeFileSync(path.join(__dirname, '..', 'db', 'mark_channel.json'), JSON.stringify(this.markedChannel));
-    }
-    getMarkedChannel = (guild: Guild) => {
-        return this.markedChannel[guild.id];
-    }
-    isMarkedChannel = (guild: Guild, channelId: string) => {
-        return this.markedChannel[guild.id] === channelId;
-    }
-
-    setLyricsChannel = (guild: Guild, lyricsChannelId: string) => {
-        if (!guild.id) {
-            return false;
-        }
-        this.lyricsChannel[guild.id] = lyricsChannelId;
-        fs.writeFileSync(path.join(__dirname, '..', 'db', 'lyrics_channel.json'), JSON.stringify(this.lyricsChannel));
-        return true;
+    isMarkedChannel = async (guildId: string, channelId: string) => {
+        const markChannel = await getMarkChannel(guildId);
+        if (!markChannel) return false;
+        return markChannel.channelId === channelId;
     }
 
     showLyrics = async (guild: Guild) => {
-        const channelId = this.lyricsChannel[guild.id];
-        const channel = client.channels.cache.get(channelId) as TextChannel;
-        const lyrics = await channel.messages.fetch(this.lyricsMessage[channelId]);
-        const existed = Object.keys(lyrics).length;
+        const lyricsData = await getLyrcisChannel(guild.id);
+        if (lyricsData && lyricsData.channelId && lyricsData.messageId) {
+            const channelId = lyricsData.channelId;
+            const messageId = lyricsData.messageId;
+            const channel = client.channels.cache.get(channelId) as TextChannel;
+            const message = await channel.messages.fetch(messageId);
+            const existed = Object.keys(message).length;
 
-        if (existed) {
-            await lyrics.edit(`${this.player.getQueue(guild)?.current.title}`);
-        } else {
-            const message = await channel.send(`${this.player.getQueue(guild)?.current.title}`);
-            this.setLyricsMessage(channel, message.id);
+            if (existed) {
+                await message.edit(`${this.player.getQueue(guild)?.current.title}`);
+            } else {
+                const message = await channel.send(`${this.player.getQueue(guild)?.current.title}`);
+                await upsertLyricsChannel(guild.id, channel.id, message.id);
+            }
         }
     }
 
-    setLyricsMessage = (channel: Channel, messageId: string) => {
-        if (!channel.id) {
-            return false;
-        }
-        this.lyricsMessage[channel.id] = messageId;
-        fs.writeFileSync(path.join(__dirname, '..', 'db', 'lyrics_message.json'), JSON.stringify(this.lyricsMessage));
-        return true;
-    }
 }
 
 export default YounhaPlayerManager;

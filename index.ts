@@ -6,8 +6,10 @@ import { GatewayServer, SlashCreator } from 'slash-create';
 
 import { registerClientEvents, registerPlayerEvents } from './event';
 import YounhaPlayerManager from './utils/younhaPlayerManager';
+import { connect } from './db';
 
 dotenv.config();
+connect();
 
 export const client = new Client({
     intents: [

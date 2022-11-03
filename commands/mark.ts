@@ -1,6 +1,7 @@
 import { VoiceChannel } from "discord.js";
 import { SlashCommand, SlashCreator, CommandContext, CommandOptionType, ChannelType } from "slash-create";
-import { client, manager } from '../index';
+import { upsertMarkChannel } from "../db";
+import { client } from '../index';
 
 class MarkCommand extends SlashCommand {
     constructor(creator: SlashCreator) {
@@ -25,7 +26,7 @@ class MarkCommand extends SlashCommand {
         const guild = client.guilds.cache.get(ctx.guildID || '');
         if (!guild) return;
         const channel = client.channels.cache.get(ctx.options.channel) as VoiceChannel;
-        const result = manager.setMarkedChannel(guild, ctx.options.channel);
+        const result = await upsertMarkChannel(guild.id, channel.id);
         ctx.sendFollowUp({ content: result ? `${channel.name} is marked` : 'mark failed' });
     }
 }
