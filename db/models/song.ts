@@ -5,9 +5,14 @@ const songSchema = new mongoose.Schema({
         type: String,
         require: true,
     },
+    release: {
+        type: Date,
+        require: true,
+    },
     author: [String],
-    arranger: [String],
     composer: [String],
+    arranger: [String],
+    genre: [String],
     album_id: {
         type: Schema.Types.ObjectId,
         ref: 'album',
@@ -15,6 +20,9 @@ const songSchema = new mongoose.Schema({
     youtubeUrl: {
         type: String,
         require: true,
+    },
+    mvYoutubeUrl: {
+        type: String,
     },
     lyrics: [{
         time: Number,

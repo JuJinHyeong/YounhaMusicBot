@@ -2,9 +2,16 @@ import mongoose from 'mongoose';
 
 import lyricsChannel from './models/lyricsChannel';
 import markChannel from './models/markChannel';
+import album from './models/album';
+import song from './models/song';
+import axios from 'axios';
+import { load } from 'cheerio';
+
+import dotenv from 'dotenv';
 
 export const connect = async () => {
     try {
+        dotenv.config();
         await mongoose.connect(process.env.DB_URL || '');
         console.log('conected');
     } catch (err) {
