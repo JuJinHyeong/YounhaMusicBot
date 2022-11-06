@@ -1,8 +1,8 @@
-import { Player, PlayerSearchResult, QueryType } from "discord-player";
+import { Player, PlayerSearchResult, QueryType, Track } from "discord-player";
 import { ClientUser, Guild, TextChannel, VoiceBasedChannel } from "discord.js";
 import { shuffle } from "./shuffle";
 import { client } from "..";
-import { deleteMarkChannel, getLyrcisChannel, getMarkChannel, upsertLyricsChannel } from "../db";
+import { deleteMarkChannel, getAllSongs, getLyrcisChannel, getMarkChannel, getSongYoutubeUrl, updateSongYoutubeUrl, upsertLyricsChannel } from "../db";
 
 class YounhaPlayerManager {
     younhaPlayList: PlayerSearchResult;
@@ -16,14 +16,31 @@ class YounhaPlayerManager {
         }
     }
 
+    addYoutubeUrl = async () => {
+        const allSong = await getAllSongs();
+
+        allSong.forEach((song) => {
+            const urls: string[] = [];
+            this.younhaPlayList.tracks.forEach((track) => {
+                const index = track.title.indexOf(song.title || 'no_found_string');
+                if(index !== -1) {
+                    urls.push(track.url);
+                }
+            })
+            if(urls.length > 0){
+                console.log(song.title, urls[0]);
+                updateSongYoutubeUrl(song.title || '', urls[0]);
+            }
+        })
+    }
+
     init = async (user: ClientUser) => {
         const searchResult = await this.player.search(process.env.YOUNHA_PLAYLIST || '', {
             requestedBy: user,
             searchEngine: QueryType.AUTO,
-        })
-            .catch(() => {
-                console.log(`search error`);
-            });
+        }).catch(() => {
+            console.log(`search error`);
+        });
 
         if (!searchResult || !searchResult.tracks.length) {
             return {
@@ -58,7 +75,6 @@ class YounhaPlayerManager {
         const shuffledTracks = shuffle(this.younhaPlayList.tracks);
         queue.addTracks(shuffledTracks);
         await queue.play();
-        await this.showLyrics(guild);
     }
     pause = (guild: Guild) => {
         const queue = this.player.getQueue(guild);
@@ -80,8 +96,9 @@ class YounhaPlayerManager {
         return markChannel.channelId === channelId;
     }
 
-    showLyrics = async (guild: Guild) => {
+    showLyrics = async (guild: Guild, track: Track) => {
         const lyricsData = await getLyrcisChannel(guild.id);
+        const songData = await getSongYoutubeUrl(track.url);
         if (lyricsData && lyricsData.channelId && lyricsData.messageId) {
             const channelId = lyricsData.channelId;
             const messageId = lyricsData.messageId;
@@ -89,10 +106,16 @@ class YounhaPlayerManager {
             const message = await channel.messages.fetch(messageId);
             const existed = Object.keys(message).length;
 
+            let messageText = '';
+            if(songData) {
+                messageText = (songData?.title || '') + '\n\n' + (songData?.lyrics[0].value || '');
+            }else{
+                messageText = `${this.player.getQueue(guild)?.current.title}`
+            }
             if (existed) {
-                await message.edit(`${this.player.getQueue(guild)?.current.title}`);
+                await message.edit(messageText);
             } else {
-                const message = await channel.send(`${this.player.getQueue(guild)?.current.title}`);
+                const message = await channel.send(messageText);
                 await upsertLyricsChannel(guild.id, channel.id, message.id);
             }
         }

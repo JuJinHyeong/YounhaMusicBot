@@ -2,16 +2,11 @@ import mongoose from 'mongoose';
 
 import lyricsChannel from './models/lyricsChannel';
 import markChannel from './models/markChannel';
-import album from './models/album';
 import song from './models/song';
-import axios from 'axios';
-import { load } from 'cheerio';
-
-import dotenv from 'dotenv';
 
 export const connect = async () => {
     try {
-        dotenv.config();
+        console.log(process.env.DB_URL);
         await mongoose.connect(process.env.DB_URL || '');
         console.log('conected');
     } catch (err) {
@@ -68,5 +63,32 @@ export const deleteLyricsChannel = async (guildId: string) => {
     } catch (err) {
         console.log(err);
         return false;
+    }
+}
+export const getAllSongs = async () => {
+    try {
+        const data = await song.find();
+        return data;
+    } catch (err) {
+        console.log(err);
+        return [];
+    }
+}
+export const updateSongYoutubeUrl = async (title: string, youtubeUrl: string) => {
+    try {
+        const data = await song.updateOne({ title }, { youtubeUrl });
+        return data;
+    } catch (err) {
+        console.log(err);
+        return false;
+    }
+}
+export const getSongYoutubeUrl = async (youtubeUrl: string) => {
+    try {
+        const data = await song.findOne({youtubeUrl});
+        return data;
+    } catch(err){
+        console.log(err);
+        return;
     }
 }
