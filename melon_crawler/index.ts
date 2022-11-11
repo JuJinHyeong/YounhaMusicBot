@@ -157,5 +157,3 @@ const createAllSongData = async () => {
     console.log(a);
     await addSongs(a);
 }
-
-createAllSongData();

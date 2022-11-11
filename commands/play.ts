@@ -16,7 +16,7 @@ class PlayCommand extends SlashCommand {
                     required: true
                 }
             ],
-            guildIDs: process.env.DISCORD_GUILD_ID ? [process.env.DISCORD_GUILD_ID] : undefined,
+            guildIDs: process.env.DISCORD_GUILD_ID ? JSON.parse(process.env.DISCORD_GUILD_ID) : undefined,
         })
     }
 

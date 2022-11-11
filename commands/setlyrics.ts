@@ -7,17 +7,17 @@ class LyricsCommand extends SlashCommand {
     constructor(creator: SlashCreator) {
         super(creator, {
             name: 'setlyrics',
-            description: 'set the channel on which the lyrics will be showed.',
+            description: '가사가 보일 채팅채널을 선택합니다.',
             options: [
                 {
                     name: 'channel',
                     type: CommandOptionType.CHANNEL,
-                    description: 'lyrics channel',
+                    description: '가사가 보일 채널',
                     required: true,
                     channel_types: [ChannelType.GUILD_TEXT],
                 }
             ],
-            guildIDs: process.env.DISCORD_GUILD_ID ? [process.env.DISCORD_GUILD_ID] : undefined,
+            guildIDs: process.env.DISCORD_GUILD_ID ? JSON.parse(process.env.DISCORD_GUILD_ID) : undefined,
         })
     }
 
@@ -28,7 +28,7 @@ class LyricsCommand extends SlashCommand {
         const channel = client.channels.cache.get(ctx.options.channel) as TextChannel;
         const message = await channel.send("Lyrics...");
         const result = await upsertLyricsChannel(guild.id, channel.id, message.id);
-        ctx.sendFollowUp({ content: result ? `${channel.name} is set to lyrics Channel` : 'lyrics channel set failed' });
+        ctx.sendFollowUp({ content: result ? `${channel.name} 이 가사채널로 선택됐습니다.` : '가사 채널을 선택하는데 문제가 있습니다.' });
     }
 }
 

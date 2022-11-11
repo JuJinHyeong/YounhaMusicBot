@@ -6,8 +6,9 @@ class UnSetLyricsCommand extends SlashCommand {
     constructor(creator: SlashCreator) {
         super(creator, {
             name: 'unsetlyrics',
-            description: 'unset the channel on which the lyrics will be showed.',
-            guildIDs: process.env.DISCORD_GUILD_ID ? [process.env.DISCORD_GUILD_ID] : undefined,
+            description: '가사가 보이는 채팅채널을 초기화 합니다.',
+            guildIDs: process.env.DISCORD_GUILD_ID ? JSON.parse(process.env.DISCORD_GUILD_ID) : undefined,
+            // requiredPermissions: ['관리자']
         })
     }
 
@@ -16,7 +17,7 @@ class UnSetLyricsCommand extends SlashCommand {
         const guild = client.guilds.cache.get(ctx.guildID || '');
         if (!guild) return;
         const result = await deleteLyricsChannel(guild.id);
-        ctx.sendFollowUp({ content: result ? 'unset lyrics channel' : 'unset lyrics channel failed' });
+        ctx.sendFollowUp({ content: result ? '초기화되었습니다.' : '초기화 실패하였습니다.' });
     }
 }
 

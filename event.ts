@@ -12,6 +12,14 @@ export const registerPlayerEvents = (player: Player) => {
     player.on('trackStart', (queue, track) => {
         manager.showLyrics(queue.guild, track);
     })
+
+    player.on('trackEnd', (queue, track) => {
+        manager.addTrack(queue);
+    })
+
+    player.on('queueEnd', async (queue) => {
+        await manager.removeLyrics(queue.guild);
+    })
 }
 
 export const registerClientEvents = (client: Client) => {

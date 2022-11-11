@@ -13,7 +13,7 @@ const voiceStateUpdate = async (oldState: VoiceState, newState: VoiceState) => {
 
         if (!isHere) return;
         if (many > 0) return;
-        return manager.pause(oldState.guild);
+        return manager.stop(oldState.guild);
     }
 
     // when user in...

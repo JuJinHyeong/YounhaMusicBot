@@ -6,7 +6,9 @@ import { GatewayServer, SlashCreator } from 'slash-create';
 
 import { registerClientEvents, registerPlayerEvents } from './event';
 import YounhaPlayerManager from './utils/younhaPlayerManager';
-import { connect } from './db';
+import { connect, getAllSongs } from './db';
+import SongCommand from './commands/song';
+import song from './db/models/song';
 
 dotenv.config();
 connect();
@@ -27,6 +29,7 @@ export const creator = new SlashCreator({
     token: process.env.DISCORD_CLIENT_TOKEN || '',
     client
 });
+
 
 creator
     .withServer(

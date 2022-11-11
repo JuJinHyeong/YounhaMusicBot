@@ -24,6 +24,7 @@
     "discord.js": "^14.6.0",
     "dotenv": "^16.0.3",
     "mdtable": "^0.3.1",
+    "moment": "^2.29.4",
     "mongoose": "^6.7.1",
     "puppeteer": "^19.2.2",
     "slash-create": "^5.9.0"

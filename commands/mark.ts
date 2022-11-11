@@ -7,7 +7,7 @@ class MarkCommand extends SlashCommand {
     constructor(creator: SlashCreator) {
         super(creator, {
             name: 'mark',
-            description: 'mark the channel on which the song will be played.',
+            description: '곡이 나올 음성채널을 선택합니다.',
             options: [
                 {
                     name: 'channel',
@@ -17,7 +17,7 @@ class MarkCommand extends SlashCommand {
                     channel_types: [ChannelType.GUILD_VOICE],
                 }
             ],
-            guildIDs: process.env.DISCORD_GUILD_ID ? [process.env.DISCORD_GUILD_ID] : undefined,
+            guildIDs: process.env.DISCORD_GUILD_ID ? JSON.parse(process.env.DISCORD_GUILD_ID) : undefined,
         })
     }
 

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import album from './models/album';
 
 import lyricsChannel from './models/lyricsChannel';
 import markChannel from './models/markChannel';
@@ -88,6 +89,17 @@ export const getSongYoutubeUrl = async (youtubeUrl: string) => {
         const data = await song.findOne({youtubeUrl});
         return data;
     } catch(err){
+        console.log(err);
+        return;
+    }
+}
+export const getAlbum = async (id?: mongoose.Types.ObjectId) => {
+    try {
+        if(id) {
+            const data = await album.findOne({_id: new mongoose.Types.ObjectId(id) });
+            return data;
+        }
+    } catch(err) {
         console.log(err);
         return;
     }

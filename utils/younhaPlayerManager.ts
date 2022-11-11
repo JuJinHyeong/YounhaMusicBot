@@ -1,37 +1,31 @@
-import { Player, PlayerSearchResult, QueryType, Track } from "discord-player";
-import { ClientUser, Guild, TextChannel, VoiceBasedChannel } from "discord.js";
+import { Player, PlayerSearchResult, QueryType, Queue, Track } from "discord-player";
+import { ClientUser, Guild, StageChannel, TextChannel, VoiceBasedChannel, VoiceChannel } from "discord.js";
 import { shuffle } from "./shuffle";
 import { client } from "..";
-import { deleteMarkChannel, getAllSongs, getLyrcisChannel, getMarkChannel, getSongYoutubeUrl, updateSongYoutubeUrl, upsertLyricsChannel } from "../db";
+import { getAlbum, getLyrcisChannel, getMarkChannel, getSongYoutubeUrl, updateSongYoutubeUrl, upsertLyricsChannel } from "../db";
+import song from "../db/models/song";
+import lyricsChannel from "../db/models/lyricsChannel";
+
+export interface CustomTrack extends Track {
+    db?: any;
+}
+
+interface CustomPlayerSearchResult extends PlayerSearchResult {
+    tracks: CustomTrack[];
+}
 
 class YounhaPlayerManager {
-    younhaPlayList: PlayerSearchResult;
+    younhaPlayList: CustomPlayerSearchResult;
+    shuffledTracks: CustomTrack[];
     player: Player;
 
     constructor(player: Player) {
         this.player = player;
+        this.shuffledTracks = [];
         this.younhaPlayList = {
             playlist: null,
             tracks: [],
         }
-    }
-
-    addYoutubeUrl = async () => {
-        const allSong = await getAllSongs();
-
-        allSong.forEach((song) => {
-            const urls: string[] = [];
-            this.younhaPlayList.tracks.forEach((track) => {
-                const index = track.title.indexOf(song.title || 'no_found_string');
-                if(index !== -1) {
-                    urls.push(track.url);
-                }
-            })
-            if(urls.length > 0){
-                console.log(song.title, urls[0]);
-                updateSongYoutubeUrl(song.title || '', urls[0]);
-            }
-        })
     }
 
     init = async (user: ClientUser) => {
@@ -49,11 +43,12 @@ class YounhaPlayerManager {
             };
         }
         this.younhaPlayList = searchResult;
+        const allSongs = await song.find();
+        this.younhaPlayList.tracks.forEach(async (track) => {
+            track.db = allSongs.find((song) => song.youtubeUrl === track.url);
+        })
     }
-    isPaused = (guild: Guild) => {
-        const queue = this.player.getQueue(guild);
-        return queue ? queue.current && !queue.playing : false;
-    }
+
     isPlaying = (guild: Guild) => {
         const queue = this.player.getQueue(guild);
         return queue ? queue.playing : false;
@@ -71,18 +66,17 @@ class YounhaPlayerManager {
         if (!queue.connection && channel?.members) {
             await queue.connect(channel);
         }
-
-        const shuffledTracks = shuffle(this.younhaPlayList.tracks);
-        queue.addTracks(shuffledTracks);
+        if (queue.playing) {
+            return;
+        }
+        await this.addTrack(queue);
         await queue.play();
     }
-    pause = (guild: Guild) => {
-        const queue = this.player.getQueue(guild);
-        if (queue) queue.setPaused(true);
-    }
-    resume = (guild: Guild) => {
-        const queue = this.player.getQueue(guild);
-        if (queue) queue.setPaused(false);
+    addTrack = async (queue: Queue<any>) => {
+        if(this.shuffledTracks.length === 0){
+            this.shuffledTracks = shuffle(this.younhaPlayList.tracks);
+        }
+        queue.addTracks(this.shuffledTracks.splice(0, queue.tracks.length ? 1 : 10));
     }
     stop = (guild: Guild) => {
         const queue = this.player.getQueue(guild);
@@ -97,8 +91,9 @@ class YounhaPlayerManager {
     }
 
     showLyrics = async (guild: Guild, track: Track) => {
-        const lyricsData = await getLyrcisChannel(guild.id);
-        const songData = await getSongYoutubeUrl(track.url);
+        const lyricsData = await lyricsChannel.findOne({ guildId: guild.id });;
+        const songData = await song.findOne({youtubeUrl: track.url}).populate('album');
+        const albumData = songData?.album as any;
         if (lyricsData && lyricsData.channelId && lyricsData.messageId) {
             const channelId = lyricsData.channelId;
             const messageId = lyricsData.messageId;
@@ -107,20 +102,38 @@ class YounhaPlayerManager {
             const existed = Object.keys(message).length;
 
             let messageText = '';
-            if(songData) {
-                messageText = (songData?.title || '') + '\n\n' + (songData?.lyrics[0].value || '');
+            if(songData && albumData) {
+                messageText = 
+                `앨범(${albumData.type || ''}): ` + (albumData.title || '') + '\n\n'
+                + '제목: ' + (songData?.title || '') + '\n\n' 
+                + (songData?.lyrics[0].value || '');
             }else{
                 messageText = `${this.player.getQueue(guild)?.current.title}`
             }
             if (existed) {
-                await message.edit(messageText);
+                await message.edit({content: '', embeds: [{title: '가사', description: messageText}]});
             } else {
-                const message = await channel.send(messageText);
+                const message = await channel.send({content: '', embeds: [{title: '가사', description: messageText}]});
                 await upsertLyricsChannel(guild.id, channel.id, message.id);
             }
         }
     }
-
+    removeLyrics = async (guild: Guild) => {
+        const lyricsData = await lyricsChannel.findOne({ guildId: guild.id });
+        if (lyricsData && lyricsData.channelId && lyricsData.messageId) {
+            const channelId = lyricsData.channelId;
+            const messageId = lyricsData.messageId;
+            const channel = client.channels.cache.get(channelId) as TextChannel;
+            const message = await channel.messages.fetch(messageId);
+            const existed = Object.keys(message).length;
+            if (existed) {
+                await message.edit({content: '재생중인 곡이 없습니다.', embeds: []});
+            } else {
+                const message = await channel.send({content: '재생중인 곡이 없습니다.', embeds: []});
+                await upsertLyricsChannel(guild.id, channel.id, message.id);
+            }
+        }
+    }
 }
 
 export default YounhaPlayerManager;

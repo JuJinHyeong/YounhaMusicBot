@@ -1,6 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 
-const songSchema = new mongoose.Schema({
+export const songSchema = new mongoose.Schema({
     title: {
         type: String,
         require: true,
@@ -13,7 +13,7 @@ const songSchema = new mongoose.Schema({
     composer: [String],
     arranger: [String],
     genre: [String],
-    album_id: {
+    album: {
         type: Schema.Types.ObjectId,
         ref: 'album',
     },
